@@ -5,9 +5,10 @@ import math
 import plotly.graph_objects as go
 import streamlit as st
 from geoconform3d import estimate, scenario_data, BASE_SOURCE, make_target
+from computation_steps import computation_steps
 
 st.set_page_config(page_title='GeoConform 3D', page_icon='🌐', layout='wide')
-st.title('GeoConform 3D · Version 2')
+st.title('GeoConform 3D · Version 3')
 st.caption('GROUP 1 | Interactive surveying computation laboratory')
 st.caption('3D Conformal Coordinate Transformation | 7-Parameter Helmert | Python')
 st.markdown('**Model:** Target = Translation + Scale × Rotation × Source')
@@ -142,11 +143,18 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
 
         st.subheader('8. Transformed additional points')
         transformed_rows = []
+        additional_inputs = []
         for row in new_rows:
-            if not str(row.get('Point', '')).strip():
-                raise ValueError('Each new point needs a Point ID.')
-            xyz = tuple(float(row[k]) for k in ('X','Y','Z'))
+            point_id = str(row.get('Point') or '').strip()
+            values_new = [row.get(k) for k in ('X','Y','Z')]
+            blank = lambda v: v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, float) and math.isnan(v))
+            if not point_id and all(blank(v) for v in values_new):
+                continue  # Ignore a completely empty extra row.
+            if not point_id or any(blank(v) for v in values_new):
+                raise ValueError('Complete the Point ID and all XYZ values, or leave the entire extra row blank.')
+            xyz = tuple(float(v) for v in values_new)
             transformed = result['transform'](xyz)
+            additional_inputs.append((point_id, xyz))
             transformed_rows.append({
                 'Point': row['Point'],
                 'X_prime': transformed[0],
@@ -154,6 +162,14 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
                 'Z_prime': transformed[2]})
         st.dataframe(transformed_rows, hide_index=True,
                      use_container_width=True)
+
+        detailed_working = computation_steps(src, tgt, result, ids, additional_inputs)
+        st.subheader('9. Step-by-step numerical solution')
+        st.caption('The working below uses the actual control coordinates and estimated parameters, not hard-coded example answers.')
+        with st.expander('Show all computation steps', expanded=True):
+            st.code(detailed_working, language=None)
+        st.download_button('Download detailed solution (.txt)', detailed_working,
+                           'GeoConform3D_Detailed_Solution.txt', mime='text/plain')
 
         report = [
             'GEOCONFORM 3D | 7-PARAMETER HELMERT TRANSFORMATION',
@@ -178,7 +194,8 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
         report.extend(' '.join(f'{v:.12f}' for v in row) for row in result['rotation'])
         report += ['', 'RESIDUAL MAGNITUDES (mm)']
         report.extend(f'{pid}: {norm*1000:.6f}' for pid,norm in zip(ids,residual_norms))
-        st.subheader('9. Export results')
+        report += ['', '', detailed_working]
+        st.subheader('10. Export results')
         left, right = st.columns(2)
         left.download_button('Download computation report (.txt)',
                              '\n'.join(report), 'GeoConform3D_Report.txt',

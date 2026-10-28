@@ -56,5 +56,30 @@ class GeoConformTests(unittest.TestCase):
             self.assertAlmostEqual(got, want, places=5)
         self.assertAlmostEqual((result['scale'] - 1) * 1e6, -3, places=5)
 
+    def test_additional_point_detailed_substitution(self):
+        from computation_steps import computation_steps
+        src, tgt, new = scenario_data(1)
+        result = estimate(src, tgt)
+        working = computation_steps(src, tgt, result, additional_points=[('N01', new[0])])
+        self.assertIn('Point N01:', working)
+        self.assertIn('R X_new = ', working)
+        self.assertIn('X_prime = T + k (R X_new)', working)
+        for value in result['transform'](new[0]):
+            self.assertIn(f'{value:.10f}', working)
+
+    def test_no_additional_points_explanation(self):
+        from computation_steps import computation_steps
+        src, tgt, _ = scenario_data(1)
+        working = computation_steps(src, tgt, estimate(src, tgt), additional_points=[])
+        self.assertIn('No additional points were supplied.', working)
+
+    def test_detailed_working(self):
+        from computation_steps import computation_steps
+        src, tgt, _ = scenario_data(1)
+        working = computation_steps(src, tgt, estimate(src, tgt))
+        self.assertIn('STEP 10', working)
+        self.assertIn('STEP 5', working)
+        self.assertIn('10.000000', working)
+
 if __name__ == '__main__':
     unittest.main()
