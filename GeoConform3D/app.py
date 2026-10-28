@@ -9,8 +9,8 @@ from computation_steps import computation_steps
 from least_squares import estimate_lsa, lsa_steps
 from lsa_presentation import display as display_lsa_steps
 
-st.set_page_config(page_title='GROUP1 3DConformal Calculator', page_icon='🌐', layout='wide')
-st.title('GROUP1 3DConformal Calculator · Version 3.2')
+st.set_page_config(page_title='GROUP1 3DConformal Calculator (Partida Assignment rani HAHAHAAAYS) ', page_icon='🌐', layout='wide')
+st.title('GROUP1 3DConformal Calculator (Partida Assignment rani HAHAHAAAYS)')
 st.caption('GROUP 1 | Interactive surveying computation laboratory')
 st.caption('3D Conformal Coordinate Transformation | 7-Parameter Helmert | Python')
 st.markdown('**Model:** Target = Translation + Scale × Rotation × Source')
