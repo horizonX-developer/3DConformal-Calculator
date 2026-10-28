@@ -83,3 +83,26 @@ class GeoConformTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class LeastSquaresTests(unittest.TestCase):
+    def test_exact_lsa(self):
+        from least_squares import estimate_lsa
+        src, tgt, _ = scenario_data(1)
+        r = estimate_lsa(src, tgt)
+        self.assertLess(r['rmse'], 1e-8)
+        self.assertAlmostEqual(r['translation'][0], 10, places=6)
+        self.assertAlmostEqual(r['angles'][0], 1.5, places=5)
+        self.assertEqual(len(r['lsa']['N']), 7)
+        self.assertEqual(len(r['lsa']['A']), 3*len(src))
+
+    def test_noisy_lsa_matches_horn(self):
+        from least_squares import estimate_lsa
+        src, tgt, _ = scenario_data(2)
+        a, b = estimate_lsa(src, tgt), estimate(src, tgt)
+        self.assertLess(abs(a['rmse']-b['rmse']), 1e-8)
+
+    def test_collinear_lsa_rejected(self):
+        from least_squares import estimate_lsa
+        src, tgt, _ = scenario_data(4)
+        with self.assertRaises(ValueError):
+            estimate_lsa(src, tgt)

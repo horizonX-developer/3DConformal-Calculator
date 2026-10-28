@@ -20,3 +20,13 @@ GitHub repository `horizonX-developer/3DConformal-Calculator`; main file path `G
 
 ## Version 3 detailed solution
 The Streamlit app now shows and exports numerical working for centroids, centered coordinates, cross-covariance, Horn matrix, quaternion, rotation, scale, translation, residuals, RMSE, and fully substituted additional-point calculations. Fully blank additional-point rows are ignored; partially filled rows raise a clear validation error.
+
+## Version 3.2 — GROUP1 3DConformal Calculator
+
+- **Least Squares Adjustment (default):** iterative nonlinear, unweighted coordinate adjustment using the exact rotation model `Rz @ Ry @ Rx`. Shows the design matrix `A`, identity weight matrix `P`, normal matrix `N = Aᵀ P A`, right-hand vector `U = Aᵀ P w`, iteration corrections, final parameters and residuals. Normal equations are solved with column preconditioning and partial-pivot elimination (not explicit matrix inversion).
+- **Horn quaternion (comparison):** retains the original Version 3.1 solver and its detailed solution.
+- Retains demonstration scenarios, editable controls, additional points, 3D plot and exports.
+- The two methods both minimize squared XYZ residuals under equal weights and should agree on well-conditioned data. Neither proves professional field accuracy.
+- No instructor lecture notes were available; the implementation follows a standard iterative nonlinear least-squares formulation, which may differ from a specific class's linearized small-angle convention.
+
+Run `py -m unittest discover -v` to execute regression tests.

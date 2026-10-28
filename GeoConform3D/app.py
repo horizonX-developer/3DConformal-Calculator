@@ -6,9 +6,11 @@ import plotly.graph_objects as go
 import streamlit as st
 from geoconform3d import estimate, scenario_data, BASE_SOURCE, make_target
 from computation_steps import computation_steps
+from least_squares import estimate_lsa, lsa_steps
+from lsa_presentation import display as display_lsa_steps
 
-st.set_page_config(page_title='GROUP1 3DConformal Calculator Assignment (partida assignment rani HAHAHAAAYS)', page_icon='🌐', layout='wide')
-st.title('GROUP1 3DConformal Calculator Assignment (partida assignment rani HAHAHAAAYS) ')
+st.set_page_config(page_title='GROUP1 3DConformal Calculator', page_icon='🌐', layout='wide')
+st.title('GROUP1 3DConformal Calculator · Version 3.2')
 st.caption('GROUP 1 | Interactive surveying computation laboratory')
 st.caption('3D Conformal Coordinate Transformation | 7-Parameter Helmert | Python')
 st.markdown('**Model:** Target = Translation + Scale × Rotation × Source')
@@ -22,6 +24,7 @@ SCENARIOS = {
     '5 · Verify all seven parameters': 5,
     'Custom · Enter your own coordinates': 0,
 }
+method = st.radio('Computation method', ['Least Squares Adjustment (classroom method)', 'Horn quaternion (comparison)'], horizontal=True)
 choice = st.selectbox('Choose computation scenario', list(SCENARIOS), index=1)
 if SCENARIOS[choice] == 2:
     st.info('Scenario 2 adds synthetic millimetre-level errors. Estimated parameters are not expected to equal the exact reference values.')
@@ -84,7 +87,7 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
              use_container_width=True):
     try:
         ids, src, tgt = parse_controls(rows)
-        result = estimate(src, tgt)
+        result = estimate_lsa(src, tgt) if method.startswith('Least Squares') else estimate(src, tgt)
         st.success('Transformation computed successfully.')
         if scenario == 2:
             st.caption('The fitted parameters differ from the reference because simulated observation errors were added.')
@@ -163,17 +166,33 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
         st.dataframe(transformed_rows, hide_index=True,
                      use_container_width=True)
 
-        detailed_working = computation_steps(src, tgt, result, ids, additional_inputs)
+        detailed_working = (lsa_steps(result) if 'lsa' in result else computation_steps(src, tgt, result, ids, additional_inputs))
+        if 'lsa' in result and additional_inputs:
+            detailed_working += '\n\nADDITIONAL POINT TRANSFORMATIONS\n'
+            for pid, xyz in additional_inputs:
+                rotated = tuple(sum(result['rotation'][i][j]*xyz[j] for j in range(3)) for i in range(3))
+                scaled = tuple(result['scale']*v for v in rotated)
+                final = result['transform'](xyz)
+                detailed_working += (f'\n{pid}: source XYZ = {xyz}\n'
+                                     f'  R × XYZ = {rotated}\n'
+                                     f'  k × (R × XYZ) = {scaled}\n'
+                                     f'  + T {result["translation"]} = target XYZ {final}\n')
         st.subheader('9. Step-by-step numerical solution')
-        st.caption('The working below uses the actual control coordinates and estimated parameters, not hard-coded example answers.')
-        with st.expander('Show all computation steps', expanded=True):
-            st.code(detailed_working, language=None)
+        st.caption('The working below uses the actual coordinates and fitted parameters. LSA displays A, P, N, U, and parameter corrections; Horn displays its quaternion procedure.')
+        if 'lsa' in result:
+            display_lsa_steps(st, result, ids, src, tgt, additional_inputs)
+            with st.expander('Advanced: original complete numerical log (raw text)', expanded=False):
+                st.code(detailed_working, language=None)
+        else:
+            with st.expander('Show all computation steps', expanded=True):
+                st.code(detailed_working, language=None)
         st.download_button('Download detailed solution (.txt)', detailed_working,
-                           'GeoConform3D_Detailed_Solution.txt', mime='text/plain')
+                           'GROUP1_Detailed_Solution.txt', mime='text/plain')
 
         report = [
-            'GEOCONFORM 3D | 7-PARAMETER HELMERT TRANSFORMATION',
+            'GROUP1 3DCONFORMAL CALCULATOR | 7-PARAMETER HELMERT TRANSFORMATION',
             'Active rotation convention: R = Rz @ Ry @ Rx',
+            'Method: '+method,
             'Coordinates in metres; angles in arcseconds',
             '', 'ESTIMATED PARAMETERS',
             *[f'{name}: {value:.9f}' for name,value in zip(names,values)],
@@ -198,14 +217,14 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
         st.subheader('10. Export results')
         left, right = st.columns(2)
         left.download_button('Download computation report (.txt)',
-                             '\n'.join(report), 'GeoConform3D_Report.txt',
+                             '\n'.join(report), 'GROUP1_Report.txt',
                              mime='text/plain', use_container_width=True)
         right.download_button('Download transformed points (.csv)',
                               csv_text(['Point','X_prime','Y_prime','Z_prime'],
                                        [[r[k] for k in
                                          ('Point','X_prime','Y_prime','Z_prime')]
                                         for r in transformed_rows]),
-                              'GeoConform3D_Transformed.csv',
+                              'GROUP1_Transformed.csv',
                               mime='text/csv', use_container_width=True)
         if scenario == 4:
             st.warning('This scenario should normally be rejected: check the control geometry.')
