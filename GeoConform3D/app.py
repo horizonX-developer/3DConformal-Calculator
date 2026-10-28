@@ -7,8 +7,8 @@ import streamlit as st
 from geoconform3d import estimate, scenario_data, BASE_SOURCE, make_target
 from computation_steps import computation_steps
 
-st.set_page_config(page_title='GeoConform 3D', page_icon='🌐', layout='wide')
-st.title('GeoConform 3D · Version 3')
+st.set_page_config(page_title='GROUP1 3DConformal Calculator Assignment (partida assignment rani HAHAHAAAYS)', page_icon='🌐', layout='wide')
+st.title('GROUP1 3DConformal Calculator Assignment (partida assignment rani HAHAHAAAYS) ')
 st.caption('GROUP 1 | Interactive surveying computation laboratory')
 st.caption('3D Conformal Coordinate Transformation | 7-Parameter Helmert | Python')
 st.markdown('**Model:** Target = Translation + Scale × Rotation × Source')
