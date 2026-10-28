@@ -1,40 +1,19 @@
-# GeoConform 3D — Python Web Application
+# GeoConform 3D — Version 2 (Group 1)
 
-A Python-only Streamlit application for 7-parameter 3D conformal (Helmert) transformation using Horn's quaternion solution.
+A seven-parameter 3D similarity / Helmert transformation teaching tool.
 
-## Run in VS Code
+## Public Streamlit app
+Run `pip install -r requirements.txt` then `streamlit run app.py`.
+Includes editable coordinate tables, 3D source/target/computed graph, residual chart, rotation matrix, equation viewer, and text/CSV exports.
 
-1. Open this folder in VS Code.
-2. Open Terminal and run `python -m pip install -r requirements.txt`.
-3. Run `python -m streamlit run app.py`.
-4. Open `http://localhost:8501` in your browser if it does not open automatically.
+## Teacher submission — online Python compiler
+Copy **the entire contents** of `online_python_version.py` into a standard Python 3 online compiler and run. It uses **only the Python standard library** and never waits for input. Change `SCENARIO = 1` at the bottom to run the five built-in demonstrations.
 
-## Run the computation engine without Streamlit
+## Mathematical conventions
+`Target = T + k * R * Source`; active rotation `R = Rz @ Ry @ Rx`; translations in metres, rotations in arcseconds, scale correction in ppm. The engine is shared in logic with the standalone file. The solution is a least-squares 3D similarity fit, not a claim of survey-grade datum accuracy.
 
-`python geoconform3d.py`
+## Test
+Run `python -m unittest -v test_geoconform3d.py`.
 
-The pure-Python engine can be pasted into online-python.com, but **the Streamlit web interface cannot run in an ordinary online Python compiler**.
-
-## Features
-
-- Five built-in test scenarios and editable user-supplied control points.
-- Seven estimated parameters: Tx, Ty, Tz, Rx, Ry, Rz, scale ppm.
-- Computed control-point coordinates, residuals, RMSE, sigma0.
-- Additional point transformation and TXT/CSV exports.
-- No interactive `input()` calls.
-
-The built-in test data are synthetic. Always check the transformation convention, coordinate reference systems, units, point correspondences, and control geometry before real surveying use.
-
-## Verification
-
-Run `py -m unittest -v test_geoconform3d.py` in VS Code to run six regression tests.
-The tests cover exact parameter recovery, noisy observations, extra-point transformation,
-collinear rejection, invalid inputs, and an alternative transformation.
-
-Scenario 2 intentionally adds observation errors. Its fitted parameters will differ
-from the exact demonstration parameters, even though the residual RMSE is small.
-Scenario 4 intentionally fails because collinear control points cannot establish a
-unique 3D similarity transformation.
-
-This is an educational equal-weight, unweighted fit. Real survey transformations
-require independent check points, suitable datum definitions, and survey-quality validation.
+## Deploy
+GitHub repository `horizonX-developer/3DConformal-Calculator`; main file path `GeoConform3D/app.py`. Upload the updated files inside the existing `GeoConform3D` folder, not into HorizonX.

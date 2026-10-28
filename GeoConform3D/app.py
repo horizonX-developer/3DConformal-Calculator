@@ -1,11 +1,14 @@
 """GeoConform 3D Streamlit web interface (Python only)."""
 import csv
 import io
+import math
+import plotly.graph_objects as go
 import streamlit as st
 from geoconform3d import estimate, scenario_data, BASE_SOURCE, make_target
 
 st.set_page_config(page_title='GeoConform 3D', page_icon='🌐', layout='wide')
-st.title('GeoConform 3D')
+st.title('GeoConform 3D · Version 2')
+st.caption('GROUP 1 | Interactive surveying computation laboratory')
 st.caption('3D Conformal Coordinate Transformation | 7-Parameter Helmert | Python')
 st.markdown('**Model:** Target = Translation + Scale × Rotation × Source')
 st.caption('Active rotation: R = Rz @ Ry @ Rx; source and target must use compatible 3D Cartesian coordinates.')
@@ -98,7 +101,11 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
         col2.metric('Component RMSE', f"{result['rmse']:.6f} m")
         col3.metric('Unit-weight σ₀', f"{result['sigma0']:.6f} m")
 
-        st.subheader('4. Computed control points and residuals')
+        st.subheader('4. Transformation equation and rotation matrix')
+        st.latex(r'\mathbf{X}_{target}=\mathbf{T}+(1+s\cdot10^{-6})\mathbf{R}\mathbf{X}_{source}')
+        st.caption('R = Rz × Ry × Rx (active, column-vector convention). The matrix below is the estimated full rotation matrix.')
+        st.dataframe([{'Row': f'R{i+1}', **{f'Column {j+1}': f'{result["rotation"][i][j]:.12f}' for j in range(3)}} for i in range(3)], hide_index=True, use_container_width=True)
+        st.subheader('5. Computed control points and residuals')
         control_results = []
         for point_id, computed, residual in zip(
                 ids, result['calculated'], result['residuals']):
@@ -112,7 +119,28 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
                      use_container_width=True)
         st.caption('Residual = target coordinate − computed coordinate.')
 
-        st.subheader('5. Transformed additional points')
+        st.subheader('6. Residual diagnostics')
+        residual_norms = [math.sqrt(sum(v*v for v in r)) for r in result['residuals']]
+        fig_res = go.Figure()
+        for axis, idx in [('X',0),('Y',1),('Z',2)]:
+            fig_res.add_bar(name=f'{axis} residual (mm)', x=ids, y=[r[idx]*1000 for r in result['residuals']])
+        fig_res.update_layout(barmode='group', xaxis_title='Control point', yaxis_title='Residual (mm)', title='Component residuals by point')
+        st.plotly_chart(fig_res, use_container_width=True)
+        st.dataframe([{'Point': pid, 'Residual magnitude (mm)': round(norm*1000, 4)} for pid,norm in zip(ids,residual_norms)], hide_index=True, use_container_width=True)
+        st.caption('Large residuals may indicate mismatched points or observation errors; low residuals alone do not establish absolute accuracy.')
+
+        st.subheader('7. Interactive 3D coordinate comparison')
+        fig3d = go.Figure()
+        def add_xyz(points, label, color):
+            fig3d.add_trace(go.Scatter3d(x=[p[0] for p in points], y=[p[1] for p in points], z=[p[2] for p in points], mode='markers+text', text=ids, textposition='top center', name=label, marker=dict(size=5, color=color)))
+        add_xyz(src, 'Source XYZ', '#2582cc')
+        add_xyz(tgt, 'Target XYZ', '#e89938')
+        add_xyz(result['calculated'], 'Computed XYZ', '#39a27e')
+        fig3d.update_layout(scene=dict(xaxis_title='X (m)', yaxis_title='Y (m)', zaxis_title='Z (m)', aspectmode='data'), margin=dict(l=0,r=0,b=0,t=25), height=520)
+        st.plotly_chart(fig3d, use_container_width=True)
+        st.caption('Rotate or zoom the graph. For small datum shifts relative to large XYZ values, points may appear nearly coincident.')
+
+        st.subheader('8. Transformed additional points')
         transformed_rows = []
         for row in new_rows:
             if not str(row.get('Point', '')).strip():
@@ -146,7 +174,11 @@ if st.button('Compute 3D Conformal Transformation', type='primary',
                                     else f'{k}={v}' for k,v in row.items()))
         report += ['', 'Demonstration scenarios use synthetic coordinates.'
                    if scenario else 'User-supplied coordinates; verify datum and units.']
-        st.subheader('6. Export results')
+        report += ['', 'ROTATION MATRIX']
+        report.extend(' '.join(f'{v:.12f}' for v in row) for row in result['rotation'])
+        report += ['', 'RESIDUAL MAGNITUDES (mm)']
+        report.extend(f'{pid}: {norm*1000:.6f}' for pid,norm in zip(ids,residual_norms))
+        st.subheader('9. Export results')
         left, right = st.columns(2)
         left.download_button('Download computation report (.txt)',
                              '\n'.join(report), 'GeoConform3D_Report.txt',
